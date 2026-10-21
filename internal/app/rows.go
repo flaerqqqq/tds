@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"tds/internal/session"
 	"tds/internal/tabulate"
@@ -42,7 +43,7 @@ func (a *App) projectRows(dirs []string, short bool, managed map[string]string) 
 			}
 		}
 		name := session.Name(dir)
-		row := []string{dir, label, "-", "-"}
+		row := []string{dir, fitLabel(label), "-", "-"}
 		if prof, ok := managed[name]; ok {
 			prof = strings.TrimSpace(prof)
 			if prof == "" {
@@ -53,6 +54,44 @@ func (a *App) projectRows(dirs []string, short bool, managed map[string]string) 
 		rows = append(rows, row)
 	}
 	return rows
+}
+
+// labelWidth caps the project column so one long path cannot push the other columns off screen.
+const labelWidth = 40
+
+// fitLabel shortens a path to labelWidth runes. Middle directories go first, as "…", keeping the
+// start and the last segments. A single segment is elided in its middle.
+func fitLabel(label string) string {
+	if utf8.RuneCountInString(label) <= labelWidth {
+		return label
+	}
+	parts := strings.Split(label, "/")
+	head, rest := parts[0], parts[1:]
+	if head == "" && len(rest) > 0 {
+		head, rest = "/"+rest[0], rest[1:]
+	}
+	if len(rest) >= 2 {
+		best := ""
+		for i := len(rest) - 1; i >= 1; i-- {
+			cand := head + "/…/" + strings.Join(rest[i:], "/")
+			if utf8.RuneCountInString(cand) > labelWidth {
+				break
+			}
+			best = cand
+		}
+		if best != "" {
+			return best
+		}
+	}
+	return elideMiddle(label, labelWidth)
+}
+
+func elideMiddle(s string, width int) string {
+	r := []rune(s)
+	keep := width - 1
+	start := keep / 2
+	end := keep - start
+	return string(r[:start]) + "…" + string(r[len(r)-end:])
 }
 
 func managedProfiles() map[string]string {
@@ -88,7 +127,7 @@ func (a *App) sessionRows() [][]string {
 		if a.cfg.IsProjectDir(s.Path) {
 			label = filepath.Base(s.Path)
 		}
-		rows = append(rows, []string{s.Name, label, s.Name, s.Profile, age(now, s.Activity)})
+		rows = append(rows, []string{s.Name, fitLabel(label), s.Name, s.Profile, age(now, s.Activity)})
 	}
 	return rows
 }
@@ -112,3 +151,23 @@ func withHeader(header []string, rows [][]string) string {
 	all := append([][]string{header}, rows...)
 	return strings.Join(tabulate.Lines(all), "\n") + "\n"
 }
+
+// pickerInput is withHeader for pickers that run with --ansi. The label of each row with
+// dim[i] set is gray. Coloring happens after padding so escape codes don't skew the columns.
+func pickerInput(header []string, rows [][]string, dim []bool) string {
+	all := append([][]string{header}, rows...)
+	padded := tabulate.Pad(all)
+	lines := make([]string, 0, len(padded))
+	for i, row := range padded {
+		if i > 0 && dim[i-1] {
+			row[1] = grayStart + row[1] + grayEnd
+		}
+		lines = append(lines, strings.Join(row, "\t"))
+	}
+	return strings.Join(lines, "\n") + "\n"
+}
+
+const (
+	grayStart = "\x1b[90m"
+	grayEnd   = "\x1b[0m"
+)

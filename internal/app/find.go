@@ -7,8 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"tds/internal/picker"
-	"tds/internal/session"
+	"tds/internal/bookmarks"
 	"tds/internal/tmux"
 )
 
@@ -46,10 +45,24 @@ func pickWithYazi() string {
 	return target
 }
 
-// listProjects returns directories directly under the search paths. The current directory
-// comes first; when it is not a project it is marked with "*".
-func (a *App) listProjects() [][]string {
-	var dirs []string
+// mergeProjects joins search-path children and bookmarks, keeping the first occurrence of each.
+func mergeProjects(children, marks []string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, d := range append(append([]string{}, children...), marks...) {
+		if !seen[d] {
+			seen[d] = true
+			out = append(out, d)
+		}
+	}
+	return out
+}
+
+// listProjects returns the search-path children followed by bookmarks. The current directory
+// comes first; when it is not a project it is marked with "*". The second result marks rows
+// whose directory no longer exists.
+func (a *App) listProjects() ([][]string, []bool) {
+	var children []string
 	for _, sp := range a.cfg.SearchPaths {
 		entries, err := os.ReadDir(sp)
 		if err != nil {
@@ -57,11 +70,17 @@ func (a *App) listProjects() [][]string {
 		}
 		for _, e := range entries {
 			if e.IsDir() && !strings.HasPrefix(e.Name(), ".") {
-				dirs = append(dirs, filepath.Join(sp, e.Name()))
+				children = append(children, filepath.Join(sp, e.Name()))
 			}
 		}
 	}
-	sort.Strings(dirs)
+	sort.Strings(children)
+	marks := bookmarks.Read(a.cfg.BookmarksFile)
+	dirs := mergeProjects(children, marks)
+	bookmarked := make(map[string]bool, len(marks))
+	for _, d := range marks {
+		bookmarked[d] = true
+	}
 
 	here, _ := os.Getwd()
 	if tmux.InTmux() && os.Getenv("TMUX_PANE") == "" {
@@ -85,16 +104,26 @@ func (a *App) listProjects() [][]string {
 	}
 
 	rows := a.projectRows(ordered, true, managedProfiles())
-	if len(rows) > 0 {
-		rows[0][1] = mark + rows[0][1]
+	for i := range rows {
+		prefix := "  "
+		switch {
+		case i == 0 && mark != "":
+			prefix = mark
+		case bookmarked[ordered[i]]:
+			prefix = bookmarkIcon + " "
+		}
+		rows[i][1] = prefix + rows[i][1]
 	}
-	return rows
+	dim := make([]bool, len(ordered))
+	for i, d := range ordered {
+		dim[i] = !bookmarks.Exists(d)
+	}
+	return rows, dim
 }
 
 func (a *App) pickProject() string {
-	requireCmd("fzf")
-	if len(a.cfg.SearchPaths) == 0 {
-		die("No search paths defined in %s", a.cfg.ConfigFile)
+	if len(a.cfg.SearchPaths) == 0 && len(bookmarks.Read(a.cfg.BookmarksFile)) == 0 {
+		die("No search paths or bookmarks. Add a search path to %s or run 'tds bm add DIR'.", a.cfg.ConfigFile)
 	}
 
 	label := "Projects & Submodules"
@@ -102,44 +131,11 @@ func (a *App) pickProject() string {
 		label = "Projects (Profile: " + a.layout.label + ")"
 	}
 
-	var key, selected string
-	for {
-		input := withHeader(projectHeader, a.listProjects())
-		var err error
-		key, selected, err = picker.Run(input, true,
-			"--expect=ctrl-r,ctrl-p,ctrl-x",
-			"--no-sort",
-			"--delimiter=\t",
-			"--with-nth=2..",
-			"--header-lines=1",
-			"--border-label= 󰅍 "+label+" ",
-			"--header=enter open · ctrl-r rebuild · ctrl-p rebuild with profile · ctrl-x kill session",
-			"--prompt=󰝰 Project > ")
-		if err != nil {
-			die("%v", err)
-		}
-		target := picker.Field(selected)
-		if key == "ctrl-x" && target != "" {
-			name := session.Name(target)
-			if tmux.IsManaged(name) {
-				_ = tmux.Kill("=" + name)
-			}
-			continue
-		}
-		break
-	}
-
-	target := picker.Field(selected)
-	if key == "ctrl-r" || key == "ctrl-p" {
-		a.opts.Recreate = true
-	}
-	if key == "ctrl-p" && target != "" {
-		if !a.pickProfile(session.Name(target)) {
-			cancel()
-		}
-	}
-	if target == "" {
-		cancel()
-	}
-	return target
+	return a.pickFrom(pickerSpec{
+		border:   " 󰅍 " + label + " ",
+		prompt:   "󰝰 Project > ",
+		help:     "enter open · ctrl-r rebuild · ctrl-p rebuild with profile · ctrl-x kill session · ctrl-d delete bookmark",
+		rows:     a.listProjects,
+		onDelete: a.removeBookmark,
+	})
 }

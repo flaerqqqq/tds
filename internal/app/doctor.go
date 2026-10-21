@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"tds/internal/bookmarks"
 	"tds/internal/profile"
 	"tds/internal/tmux"
 )
@@ -41,6 +42,12 @@ func cmdDoctor(a *App, args []string) {
 			ok("search path exists: %s", sp)
 		} else {
 			warnLine("search path missing: %s", sp)
+		}
+	}
+
+	for _, d := range bookmarks.Read(a.cfg.BookmarksFile) {
+		if !bookmarks.Exists(d) {
+			warnLine("bookmark directory is missing: %s", d)
 		}
 	}
 

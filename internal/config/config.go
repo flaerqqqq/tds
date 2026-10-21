@@ -9,11 +9,12 @@ import (
 )
 
 type Paths struct {
-	ConfigDir   string
-	ConfigFile  string
-	ProfilesDir string
-	CacheDir    string
-	HistoryFile string
+	ConfigDir     string
+	ConfigFile    string
+	ProfilesDir   string
+	CacheDir      string
+	HistoryFile   string
+	BookmarksFile string
 }
 
 type Config struct {
@@ -39,11 +40,12 @@ func DefaultPaths() Paths {
 	configDir := filepath.Join(configRoot, "tds")
 	cacheDir := filepath.Join(cacheRoot, "tds")
 	return Paths{
-		ConfigDir:   configDir,
-		ConfigFile:  filepath.Join(configDir, "config.json"),
-		ProfilesDir: filepath.Join(configDir, "profiles"),
-		CacheDir:    cacheDir,
-		HistoryFile: filepath.Join(cacheDir, "history"),
+		ConfigDir:     configDir,
+		ConfigFile:    filepath.Join(configDir, "config.json"),
+		ProfilesDir:   filepath.Join(configDir, "profiles"),
+		CacheDir:      cacheDir,
+		HistoryFile:   filepath.Join(cacheDir, "history"),
+		BookmarksFile: filepath.Join(cacheDir, "bookmarks"),
 	}
 }
 

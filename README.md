@@ -41,6 +41,10 @@ tds [command] [options]
 | `open [DIR]` | Open DIR (default: current directory). This is used when no command is given. |
 | `find` | Pick a project from `search_paths` with fzf. `find --yazi` picks a directory in yazi. |
 | `history` | Pick from recently opened directories. |
+| `bm` | Pick a bookmarked directory with fzf. |
+| `bm add [DIR]` | Bookmark DIR (default: current directory). |
+| `bm list` | List bookmarks with `ok` or `missing` status. |
+| `bm remove <DIR>` | Remove a bookmark. |
 | `sessions` | Pick a managed tmux session. Enter switches to it. |
 | `list` | List managed sessions. |
 | `kill <name\|dir>` | Kill a managed session by exact name, or the session for a directory. |
@@ -77,6 +81,8 @@ tds find -p dev --recreate   # rebuild the picked project's session with dev
 
 `find` and `history` show projects. The current directory is always the first row, next to the
 prompt and preselected. If it isn't under `search_paths`, it is marked with `*` and shown with its path.
+`find` also lists bookmarks after the `search_paths` projects. A bookmark whose directory is gone
+is shown in gray; `enter` on it shows a notice and keeps the picker open.
 
 | Key | Action |
 | --- | --- |
@@ -84,6 +90,9 @@ prompt and preselected. If it isn't under `search_paths`, it is marked with `*` 
 | `ctrl-r` | Rebuild the session (creates it if missing). |
 | `ctrl-p` | Pick a profile, then rebuild. |
 | `ctrl-x` | Kill the project's session and reopen the list. |
+| `ctrl-d` | On a bookmark: kill its managed session if any, delete the bookmark, and reopen the list. On any other project it shows a notice. |
+
+`bm` shows only bookmarks, with the same keys.
 
 `sessions` shows managed sessions, the current session first, then most recently active. Each row
 shows the project, session name, profile and last activity. `enter` switches to the session instead
@@ -91,6 +100,23 @@ of opening a project. `ctrl-r`, `ctrl-p` and `ctrl-x` work as above.
 
 Profile pickers list `[Current: …]` (the session's profile, when it exists), `[Default: …]`, then every
 profile in the profiles directory, and `basic`.
+
+### Bookmarks
+
+A bookmark is a directory outside `search_paths` that should appear in `find`. Bookmarks are
+stored in `$XDG_CACHE_HOME/tds/bookmarks` (default `~/.cache/tds/bookmarks`), one absolute path per
+line. `tds clean` does not remove them.
+
+```sh
+cd ~/scratch/one-off
+tds bm add         # bookmark the current directory
+tds bm add ~/work/client-x
+tds bm list
+tds bm remove ~/work/client-x
+```
+
+A directory that is already directly under a `search_paths` entry is not bookmarked, because
+`find` already lists it.
 
 ## Configuration
 

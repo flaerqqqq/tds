@@ -14,6 +14,10 @@ Commands:
   open [DIR]        Open DIR (default: current directory). Used when no command is given.
   find              Pick a project from the search paths with fzf.
   history           Pick a project from recent history with fzf.
+  bm                Pick a bookmarked directory with fzf.
+  bm add [DIR]      Bookmark DIR (default: current directory).
+  bm list           List bookmarks and whether they exist.
+  bm remove <DIR>   Remove a bookmark.
   sessions          Pick a managed tmux session with fzf.
   list              List managed tmux sessions.
   kill <name|dir>   Kill a managed session by name, or the session for a directory.
@@ -43,6 +47,8 @@ Examples:
   tds find -p dev           Pick a project and use the dev profile
   tds find -y               Pick a directory with yazi
   tds history               Pick from recent projects
+  tds bm add                Bookmark the current directory
+  tds bm                    Pick a bookmark
   tds sessions              Pick a running session
   tds kill .                Kill the session for the current directory
   tds find -p dev --recreate

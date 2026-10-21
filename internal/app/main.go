@@ -9,7 +9,7 @@ func Main(args []string) {
 	cmd := "open"
 	if len(args) > 0 {
 		switch args[0] {
-		case "open", "find", "history", "sessions", "list", "kill", "doctor", "clean", "help":
+		case "open", "find", "history", "bm", "sessions", "list", "kill", "doctor", "clean", "help":
 			cmd, args = args[0], args[1:]
 		case "-h", "--help":
 			cmd, args = "help", args[1:]
@@ -45,6 +45,8 @@ func Main(args []string) {
 		cmdFind(a, args)
 	case "history":
 		cmdHistory(a, args)
+	case "bm":
+		cmdBookmark(a, args)
 	case "sessions":
 		cmdSessions(a, args)
 	case "list":
