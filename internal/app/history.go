@@ -23,7 +23,7 @@ func cmdHistory(a *App, args []string) {
 		"--delimiter=\t",
 		"--with-nth=2..",
 		"--header-lines=1",
-		"--header=enter open",
+		"--footer=enter open",
 		"--prompt=󰉋 Recent Dev Projects > ")
 	if err != nil {
 		die("%v", err)

@@ -58,10 +58,20 @@ func mergeProjects(children, marks []string) []string {
 	return out
 }
 
-// listProjects returns the search-path children followed by bookmarks. The current directory
-// comes first; when it is not a project it is marked with "*". The second result marks rows
-// whose directory no longer exists.
-func (a *App) listProjects() ([][]string, []bool) {
+// currentDir is the working directory, or the path of the managed session when running in a
+// tmux popup (where TMUX_PANE is unset).
+func currentDir() string {
+	here, _ := os.Getwd()
+	if tmux.InTmux() && os.Getenv("TMUX_PANE") == "" {
+		if managed, path := tmux.ActiveSessionInfo(); managed && path != "" {
+			return path
+		}
+	}
+	return here
+}
+
+// searchChildren returns the visible directories directly under the search paths, sorted.
+func (a *App) searchChildren() []string {
 	var children []string
 	for _, sp := range a.cfg.SearchPaths {
 		entries, err := os.ReadDir(sp)
@@ -75,6 +85,14 @@ func (a *App) listProjects() ([][]string, []bool) {
 		}
 	}
 	sort.Strings(children)
+	return children
+}
+
+// listProjects returns the search-path children followed by bookmarks. The current directory
+// comes first; when it is not a project it is marked with "*". The second result marks rows
+// whose directory no longer exists.
+func (a *App) listProjects() ([][]string, []bool) {
+	children := a.searchChildren()
 	marks := bookmarks.Read(a.cfg.BookmarksFile)
 	dirs := mergeProjects(children, marks)
 	bookmarked := make(map[string]bool, len(marks))
@@ -82,12 +100,7 @@ func (a *App) listProjects() ([][]string, []bool) {
 		bookmarked[d] = true
 	}
 
-	here, _ := os.Getwd()
-	if tmux.InTmux() && os.Getenv("TMUX_PANE") == "" {
-		if managed, path := tmux.ActiveSessionInfo(); managed && path != "" {
-			here = path
-		}
-	}
+	here := currentDir()
 
 	mark := ""
 	ordered := []string{here}
@@ -134,7 +147,7 @@ func (a *App) pickProject() string {
 	return a.pickFrom(pickerSpec{
 		border:   " 󰅍 " + label + " ",
 		prompt:   "󰝰 Project > ",
-		help:     "enter open · ctrl-r rebuild · ctrl-p rebuild with profile · ctrl-x kill session · ctrl-d delete bookmark",
+		help:     "enter open · ^r rebuild · ^p profile · ^x kill · ^d delete bookmark",
 		rows:     a.listProjects,
 		onDelete: a.removeBookmark,
 	})

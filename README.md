@@ -44,6 +44,7 @@ tds [command] [options]
 | `bm` | Pick a bookmarked directory with fzf. |
 | `bm add [DIR]` | Bookmark DIR (default: current directory). |
 | `bm list` | List bookmarks with `ok` or `missing` status. |
+| `bm tree` | Pick from bookmarks shown as a tree under their parent directories. |
 | `bm remove <DIR>` | Remove a bookmark. |
 | `sessions` | Pick a managed tmux session. Enter switches to it. |
 | `list` | List managed sessions. |
@@ -117,6 +118,12 @@ tds bm remove ~/work/client-x
 
 A directory that is already directly under a `search_paths` entry is not bookmarked, because
 `find` already lists it.
+
+`tds bm tree DIR` shows only the tree that contains DIR and puts the cursor on its nearest node. If DIR
+is not in any tree, only DIR is shown. `tds bm tree --session-scope` does the same for the current tmux
+session's directory. Without either flag it shows the whole tree. A `search_paths` project appears only when it has a
+bookmark below it. Directories between a root and a bookmark, and a common parent of two bookmarks,
+appear in gray so the tree stays connected. The keys are the same as `find`.
 
 ## Configuration
 

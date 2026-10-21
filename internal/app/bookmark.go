@@ -10,12 +10,18 @@ import (
 
 const bookmarkIcon = "󰃀"
 
+func printNoBookmarks() {
+	fmt.Println("No bookmarks. Use 'tds bm add' to add one.")
+}
+
 func cmdBookmark(a *App, args []string) {
 	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
 		cmdBookmarkPicker(a, args)
 		return
 	}
 	switch args[0] {
+	case "tree":
+		cmdBookmarkTree(a, args[1:])
 	case "add":
 		bookmarkAdd(a, args[1:])
 	case "list":
@@ -33,7 +39,7 @@ func cmdBookmarkPicker(a *App, args []string) {
 		die("bm takes no directory argument; use 'tds bm add DIR'.")
 	}
 	if len(bookmarks.Read(a.cfg.BookmarksFile)) == 0 {
-		fmt.Println("No bookmarks. Use 'tds bm add' to add one.")
+		printNoBookmarks()
 		return
 	}
 	a.resolveLayout()
@@ -41,7 +47,7 @@ func cmdBookmarkPicker(a *App, args []string) {
 	target := a.pickFrom(pickerSpec{
 		border:   " " + bookmarkIcon + " Bookmarks ",
 		prompt:   bookmarkIcon + " Bookmark > ",
-		help:     "enter open · ctrl-r rebuild · ctrl-p rebuild with profile · ctrl-x kill session · ctrl-d kill and delete bookmark",
+		help:     "enter open · ^r rebuild · ^p profile · ^x kill · ^d delete bookmark",
 		rows:     a.bookmarkRows,
 		onDelete: a.removeBookmark,
 	})

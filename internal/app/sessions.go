@@ -22,7 +22,7 @@ func cmdSessions(a *App, args []string) {
 			"--with-nth=2..",
 			"--header-lines=1",
 			"--border-label= 󰖲 Sessions ",
-			"--header=enter switch · ctrl-r recreate · ctrl-p recreate with profile · ctrl-x kill",
+			"--footer=enter switch · ^r rebuild · ^p profile · ^x kill",
 			"--prompt=󰖯 Session > ")
 		if err != nil {
 			die("%v", err)

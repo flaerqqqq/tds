@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"os"
 
 	"tds/internal/picker"
@@ -14,8 +15,11 @@ type pickerSpec struct {
 	border   string
 	prompt   string
 	help     string
+	notice   string
 	rows     func() ([][]string, []bool)
 	onDelete func(dir string) bool
+	topDown  bool
+	focus    string
 }
 
 // pickFrom runs a project picker and returns the chosen directory. ctrl-r and ctrl-p set the
@@ -24,28 +28,46 @@ type pickerSpec struct {
 func (a *App) pickFrom(spec pickerSpec) string {
 	requireCmd("fzf")
 
-	notice := ""
+	notice := spec.notice
+	focus := spec.focus
 	var key, selected string
 	for {
 		rows, dim := spec.rows()
 		if len(rows) == 0 {
 			os.Exit(0)
 		}
-		header := spec.help
-		if notice != "" {
-			header = notice + " · " + header
+		layout := "--layout=default"
+		if spec.topDown {
+			layout = "--layout=reverse"
 		}
-		var err error
-		key, selected, err = picker.Run(pickerInput(projectHeader, rows, dim), true,
+		extra := []string{}
+		if focus != "" {
+			for i, r := range rows {
+				if r[0] == focus {
+					extra = append(extra, fmt.Sprintf("--bind=load:pos(%d)", i+1))
+					break
+				}
+			}
+			focus = ""
+		}
+		args := []string{
 			"--expect=ctrl-r,ctrl-p,ctrl-x,ctrl-d",
 			"--ansi",
 			"--no-sort",
+			layout,
 			"--delimiter=\t",
 			"--with-nth=2..",
 			"--header-lines=1",
-			"--border-label="+spec.border,
-			"--header="+header,
-			"--prompt="+spec.prompt)
+			"--border-label=" + spec.border,
+			"--footer=" + spec.help,
+			"--prompt=" + spec.prompt,
+		}
+		if notice != "" {
+			args = append(args, "--header="+notice)
+		}
+		args = append(args, extra...)
+		var err error
+		key, selected, err = picker.Run(pickerInput(projectHeader, rows, dim), true, args...)
 		if err != nil {
 			die("%v", err)
 		}

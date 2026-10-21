@@ -17,6 +17,9 @@ Commands:
   bm                Pick a bookmarked directory with fzf.
   bm add [DIR]      Bookmark DIR (default: current directory).
   bm list           List bookmarks and whether they exist.
+  bm tree [DIR]     Pick from bookmarks shown as a tree. DIR limits it to the tree containing DIR,
+                    or shows just DIR when it is not in a tree.
+                    --session-scope uses the current tmux session's directory instead.
   bm remove <DIR>   Remove a bookmark.
   sessions          Pick a managed tmux session with fzf.
   list              List managed tmux sessions.
